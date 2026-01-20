@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "name": "1-million-of-why",
+  "builds": [
+    {
+      "src": "src/app.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["src/**", "dist/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/src/app.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/test-browser.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "src/app.ts": {
+      "maxDuration": 30
+    }
+  }
+}

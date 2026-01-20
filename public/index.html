@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1 Million of Why - AI Question Generator</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .container { background: white; padding: 25px; border-radius: 12px; margin: 15px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
+        input:focus, select:focus { border-color: #667eea; outline: none; }
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; transition: transform 0.2s; }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .result { background: #f8f9fa; padding: 20px; border-left: 4px solid #667eea; margin: 15px 0; border-radius: 8px; }
+        .error { border-left-color: #dc3545; background: #f8d7da; color: #721c24; }
+        .loading { opacity: 0.7; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .api-info { background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .endpoint { font-family: monospace; background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤔 1 Million of Why</h1>
+        <p>AI-Powered Question & Answer Generator</p>
+        <p><em>Transform boredom into curiosity with intelligent questions and engaging answers</em></p>
+    </div>
+    
+    <div class="feature-grid">
+        <div class="container">
+            <h2>🎯 Generate Questions</h2>
+            <input type="text" id="questionInput" placeholder="Enter anything: cats, dogs, plants, etc." value="cats purring in the sun">
+            
+            <select id="wildcardSelect">
+                <option value="funny">😄 Funny - Humorous & witty</option>
+                <option value="scientific">🔬 Scientific - Technical & precise</option>
+                <option value="poetic">🎭 Poetic - Lyrical & metaphorical</option>
+                <option value="childlike">👶 Childlike - Simple & wonder-filled</option>
+                <option value="philosophical">🤔 Philosophical - Deep & existential</option>
+            </select>
+            
+            <button onclick="generateQuestion()" id="questionBtn">Generate Question</button>
+            
+            <div id="questionResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>💡 Generate Answers</h2>
+            <input type="text" id="answerInput" placeholder="Enter a 'Why' question" value="Why do cats purr when they're happy?">
+            
+            <button onclick="generateAnswer()" id="answerBtn">Generate Answer</button>
+            
+            <div id="answerResult"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🎨 Available Wildcards</h2>
+        <button onclick="getWildcards()">Get All Wildcard Styles</button>
+        <div id="wildcardsResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 API Information</h2>
+        <div class="api-info">
+            <h3>Available Endpoints:</h3>
+            <p><span class="endpoint">POST /api/generate-question</span> - Generate questions from any input</p>
+            <p><span class="endpoint">POST /api/generate-answer</span> - Generate answers for questions</p>
+            <p><span class="endpoint">GET /api/wildcards</span> - Get all available wildcard styles</p>
+            <p><span class="endpoint">GET /api/health</span> - Check API health status</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function makeRequest(endpoint, data = null) {
+            try {
+                const options = {
+                    method: data ? 'POST' : 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                return await response.json();
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function generateQuestion() {
+            const input = document.getElementById('questionInput').value;
+            const wildcard = document.getElementById('wildcardSelect').value;
+            const btn = document.getElementById('questionBtn');
+            const result = document.getElementById('questionResult');
+            
+            if (!input.trim()) {
+                result.innerHTML = '<div class="result error">Please enter some input!</div>';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            result.innerHTML = '<div class="result loading">🤔 Generating your curious question...</div>';
+            
+            const response = await makeRequest('/api/generate-question', { input, wildcard });
+            
+            if (response.success) {
+                result.innerHTML = `
+                    <div class="result">
+                        <h3>✨ Generated Question:</h3>
+                        <p style="font-size: 18px; font-weight: 600; color: #333;"><strong>${response.data.question}</strong></p>
+                        <p><em>📂 Category: ${response.data.category} | 🎯 Complexity: ${response.data.complexity_score}/10</em></p>
+                        <p><em>🎣 Hook: ${response.data.hook_line}</em></p>
+                        <p><em>🎨 Style: ${response.data.wildcard_applied.name} - ${response.data.wildcard_applied.description}</em></p>
+                    </div>
+                `;
+            } else {
+                result.innerHTML = `<div class="result error">❌ Error: ${response.error}</div>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Generate Question';
+        }
+        
+        async function generateAnswer() {
+            const question = document.getElementById('answerInput').value;
+            const wildcard = document.getElementById('wildcardSelect').value;
+            const btn = document.getElementById('answerBtn');
+            const result = document.getElementById('answerResult');
+            
+            if (!question.trim()) {
+                result.innerHTML = '<div class="result error">Please enter a question!</div>';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            result.innerHTML = '<div class="result loading">💡 Generating your enlightening answer...</div>';
+            
+            const response = await makeRequest('/api/generate-answer', { question, wildcard });
+            
+            if (response.success) {
+                result.innerHTML = `
+                    <div class="result">
+                        <h3>💡 Generated Answer:</h3>
+                        <p style="line-height: 1.6;">${response.data.answer}</p>
+                        <p><em>📊 Confidence: ${response.data.confidence_score}% | 📚 Sources: ${response.data.sources.join(', ')}</em></p>
+                        <p><em>🎨 Style: ${response.data.wildcard_applied.name}</em></p>
+                    </div>
+                `;
+            } else {
+                result.innerHTML = `<div class="result error">❌ Error: ${response.error}</div>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Generate Answer';
+        }
+        
+        async function getWildcards() {
+            const result = document.getElementById('wildcardsResult');
+            result.innerHTML = '<div class="result loading">🎨 Loading wildcard styles...</div>';
+            
+            const response = await makeRequest('/api/wildcards');
+            
+            if (response.success) {
+                const wildcardsHtml = response.data.map(w => 
+                    `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <strong>🎭 ${w.name.charAt(0).toUpperCase() + w.name.slice(1)}</strong>: ${w.description}<br>
+                        <em style="color: #666;">${w.tone}</em>
+                    </div>`
+                ).join('');
+                
+                result.innerHTML = `
+                    <div class="result">
+                        <h3>🎨 Available Wildcard Styles:</h3>
+                        ${wildcardsHtml}
+                    </div>
+                `;
+            } else {
+                result.innerHTML = `<div class="result error">❌ Error: ${response.error}</div>`;
+            }
+        }
+        
+        // Test server connection on load
+        window.onload = async function() {
+            const response = await makeRequest('/api/health');
+            if (response.success || response.status === 'healthy') {
+                console.log('✅ Connected to API server');
+            } else {
+                console.log('❌ Cannot connect to API server');
+            }
+        };
+    </script>
+</body>
+</html>
