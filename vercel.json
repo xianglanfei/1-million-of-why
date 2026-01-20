@@ -3,14 +3,14 @@
   "name": "1-million-of-why-api",
   "builds": [
     {
-      "src": "api/index.ts",
+      "src": "api/simple.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.ts"
+      "dest": "/api/simple.ts"
     },
     {
       "src": "/(.*)",
@@ -18,7 +18,7 @@
     }
   ],
   "functions": {
-    "api/index.ts": {
+    "api/simple.ts": {
       "maxDuration": 30
     }
   }
