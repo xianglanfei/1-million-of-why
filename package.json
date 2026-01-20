@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "ts-node src/app.ts",
-    "build": "tsc",
-    "vercel-build": "npm run build",
+    "build": "echo 'No build needed for Vercel'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

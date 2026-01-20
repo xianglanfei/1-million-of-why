@@ -1,13 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import express from 'express';
-import cors from 'cors';
 import { QuestionGenerator } from '../src/services/questionGenerator';
 import { AnswerGenerator } from '../src/services/answerGenerator';
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
+import { WildcardService } from '../src/services/wildcardService';
 
 const aiConfig = {
   provider: 'openai' as const,
@@ -18,47 +12,48 @@ const aiConfig = {
 
 const questionGenerator = new QuestionGenerator(aiConfig);
 const answerGenerator = new AnswerGenerator(aiConfig);
+const wildcardService = new WildcardService();
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'healthy', timestamp: new Date().toISOString() });
-});
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-// Generate question
-app.post('/api/generate-question', async (req, res) => {
-  try {
-    const { input, wildcard, type = 'text' } = req.body;
-    const result = await questionGenerator.generateQuestion(input, wildcard, undefined, undefined, type);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
-});
 
-// Generate answer
-app.post('/api/generate-answer', async (req, res) => {
+  const { url } = req;
+
   try {
-    const { question, wildcard } = req.body;
-    const { WildcardService } = await import('../src/services/wildcardService');
-    const wildcardService = new WildcardService();
-    const selectedWildcard = wildcard ? wildcardService.getWildcardByName(wildcard) : undefined;
-    const result = await answerGenerator.generateAnswer(question, selectedWildcard);
-    res.json({ success: true, data: result });
+    if (url === '/api/health') {
+      res.json({ success: true, status: 'healthy', timestamp: new Date().toISOString() });
+    }
+    else if (url === '/api/generate-question' && req.method === 'POST') {
+      const { input, wildcard, type = 'text' } = req.body;
+      const result = await questionGenerator.generateQuestion(input, wildcard, undefined, undefined, type);
+      res.json({ success: true, data: result });
+    }
+    else if (url === '/api/generate-answer' && req.method === 'POST') {
+      const { question, wildcard } = req.body;
+      const selectedWildcard = wildcard ? wildcardService.getWildcardByName(wildcard) : undefined;
+      const result = await answerGenerator.generateAnswer(question, selectedWildcard);
+      res.json({ success: true, data: result });
+    }
+    else if (url === '/api/wildcards') {
+      const wildcards = wildcardService.getAllWildcards();
+      res.json({ success: true, data: wildcards });
+    }
+    else {
+      res.status(404).json({ success: false, error: 'Endpoint not found' });
+    }
   } catch (error) {
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('API Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
   }
-});
-
-// Get wildcards
-app.get('/api/wildcards', async (req, res) => {
-  try {
-    const { WildcardService } = await import('../src/services/wildcardService');
-    const wildcardService = new WildcardService();
-    const wildcards = wildcardService.getAllWildcards();
-    res.json({ success: true, data: wildcards });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
-
-export default app;
+}
